@@ -4,7 +4,7 @@ const crypto = require("crypto")
 const app = express()
 
 function generarCodigo() {
-  return "PROD-" + crypto.randomBytes(3).toString("hex").toUpperCase()
+  return "SOPRIM-" + crypto.randomBytes().toString("hex").toUpperCase()
 }
 
 app.get("/", (req, res) => {
