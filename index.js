@@ -54,10 +54,12 @@ button { background:#00ff99; font-weight:bold; cursor:pointer; }
   <p>Sube la captura de PayPal y rellena los datos para validar tu compra.</p>
 
   <form action="/enviar-verificacion" method="POST" enctype="multipart/form-data">
-    <input type="hidden" name="codigo" value="${codigo}">
+    <input type="hidden" name="codigo" value="${codigo}" required>
+    <input type="text" name="discordUser" placeholder="Tu usuario completo de Discord (ej: User#1234)" required>
     <input type="file" name="captura" accept="image/*" required>
     <input type="text" name="nombrePaypal" placeholder="Nombre de PayPal" required>
     <input type="email" name="email" placeholder="Correo electrónico" required>
+    <input type="text" name="whatsapp" placeholder="Número de WhatsApp (opcional)">
     <button type="submit">Enviar verificación</button>
   </form>
 </div>
@@ -75,14 +77,14 @@ app.post("/enviar-verificacion", (req, res) => {
       return res.send("Error al subir la captura: " + err.message);
     }
 
-    const { nombrePaypal, email, codigo } = req.body;
+    const { nombrePaypal, email, codigo, discordUser, whatsapp } = req.body;
 
-    if (!req.file) {
-      return res.send("La captura de PayPal es obligatoria.");
+    // Validaciones obligatorias
+    if (!codigo || !discordUser || !req.file || !nombrePaypal || !email) {
+      return res.send("Por favor completa todos los campos obligatorios y sube la captura.");
     }
 
     try {
-      // Preparamos el formulario para Discord
       const form = new FormData();
       form.append("file", req.file.buffer, req.file.originalname);
       form.append("payload_json", JSON.stringify({
@@ -93,19 +95,21 @@ app.post("/enviar-verificacion", (req, res) => {
             color: 65280, // verde
             fields: [
               { name: "Código", value: codigo },
+              { name: "Discord", value: discordUser },
               { name: "Nombre PayPal", value: nombrePaypal },
-              { name: "Email", value: email }
+              { name: "Email", value: email },
+              { name: "WhatsApp", value: whatsapp ? whatsapp : "No proporcionado" }
             ]
           }
         ]
       }));
 
-      // Enviamos a Discord
       await axios.post(DISCORD_WEBHOOK_URL, form, {
         headers: form.getHeaders()
       });
 
-      res.send("<h2>Verificación enviada correctamente al servidor de Discord.</h2>");
+      // Redirigir al usuario a tu página principal
+      res.redirect("https://sites.google.com/view/soprimico/inicio");
     } catch (error) {
       console.error("Error enviando a Discord:", error);
       res.send("Error enviando la verificación a Discord.");
