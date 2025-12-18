@@ -1,18 +1,27 @@
-const express = require("express")
-const crypto = require("crypto")
+const express = require("express");
+const crypto = require("crypto");
 
-const app = express()
+const app = express();
 
+// Función para generar código de 10 letras
 function generarCodigo() {
-  return "SOPRIM-" + crypto.randomBytes().toString("hex").toUpperCase()
+  const letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let codigo = "";
+  for (let i = 0; i < 10; i++) {
+    const index = crypto.randomInt(0, letras.length);
+    codigo += letras[index];
+  }
+  return "SOPRIM-" + codigo;
 }
 
+// Ruta principal
 app.get("/", (req, res) => {
-  res.send("Servidor activo/ si ves este enalace, pon /success al final")
-})
+  res.send("Servidor activo. Si ves este mensaje, añade /success al final de la URL.");
+});
 
+// Ruta /success
 app.get("/success", (req, res) => {
-  const codigo = generarCodigo()
+  const codigo = generarCodigo();
 
   res.send(`
     <!DOCTYPE html>
@@ -42,6 +51,14 @@ app.get("/success", (req, res) => {
           color: #00ff99;
           font-weight: bold;
         }
+        a.discord-link {
+          color: #7289da;
+          text-decoration: none;
+          font-weight: bold;
+        }
+        a.discord-link:hover {
+          text-decoration: underline;
+        }
       </style>
     </head>
     <body>
@@ -49,14 +66,15 @@ app.get("/success", (req, res) => {
         <h1>Pago completado</h1>
         <p>Tu código es:</p>
         <div class="code">${codigo}</div>
-        <p>Úsalo en Discord para recibir tu producto</p><p>Url de discord: https://discord.gg/kNh2PmRFEB</p>
+        <p>Úsalo en Discord para recibir tu producto</p>
+        <p>Url de Discord: <a href="https://discord.gg/kNh2PmRFEB" class="discord-link" target="_blank">https://discord.gg/kNh2PmRFEB</a></p>
       </div>
     </body>
     </html>
-  `)
-})
+  `);
+});
 
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("Servidor iniciado en puerto " + PORT)
-})
+  console.log("Servidor iniciado en puerto " + PORT);
+});
