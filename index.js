@@ -12,11 +12,15 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: "bielicusyt@gmail.com",     // Tu Gmail
     pass: "xkmpgiceiwstkelz"          // Contraseña de aplicación de Gmail
-  }
+  },
+  secure: true,
+  port: 465
 });
 
 // ---------- SUBIDA DE IMÁGENES ----------
-const upload = multer({ limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB máximo
+const upload = multer({
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB máximo
+});
 
 // ---------- GENERAR CÓDIGO ----------
 function generarCodigo() {
@@ -71,37 +75,47 @@ button { background:#00ff99; font-weight:bold; cursor:pointer; }
 });
 
 // ---------- RECIBIR FORM ----------
-app.post("/enviar-verificacion", upload.single("captura"), async (req, res) => {
-  const { nombrePaypal, email, codigo } = req.body;
+app.post("/enviar-verificacion", (req, res) => {
+  // Usamos multer manualmente para capturar errores
+  upload.single("captura")(req, res, async (err) => {
+    if (err) {
+      console.error("Error subiendo archivo:", err);
+      return res.send("Error al subir la captura: " + err.message);
+    }
 
-  if (!req.file) {
-    return res.send("Falta la captura.");
-  }
+    const { nombrePaypal, email, codigo } = req.body;
 
-  try {
-    await transporter.sendMail({
-      from: `"Verificación Soprimico" <bielicusyt@gmail.com>`,
-      to: "bielicusyt@gmail.com", // Se envía a tu mismo correo
-      subject: "Nueva verificación de compra",
-      html: `
-        <h2>Nueva compra</h2>
-        <p><strong>Código:</strong> ${codigo}</p>
-        <p><strong>Nombre PayPal:</strong> ${nombrePaypal}</p>
-        <p><strong>Email:</strong> ${email}</p>
-      `,
-      attachments: [
-        {
-          filename: req.file.originalname,
-          content: req.file.buffer
-        }
-      ]
-    });
+    // Verificamos que haya imagen
+    if (!req.file) {
+      return res.send("La captura de PayPal es obligatoria.");
+    }
 
-    res.send("<h2>Verificación enviada correctamente. Revisa tu correo.</h2>");
-  } catch (err) {
-    console.error(err);
-    res.send("Error enviando el correo.");
-  }
+    try {
+      // Enviar correo con la imagen adjunta
+      await transporter.sendMail({
+        from: `"Verificación Soprimico" <bielicusyt@gmail.com>`,
+        to: "bielicusyt@gmail.com",
+        subject: "Nueva verificación de compra",
+        html: `
+          <h2>Nueva compra</h2>
+          <p><strong>Código:</strong> ${codigo}</p>
+          <p><strong>Nombre PayPal:</strong> ${nombrePaypal}</p>
+          <p><strong>Email:</strong> ${email}</p>
+        `,
+        attachments: [
+          {
+            filename: req.file.originalname,
+            content: req.file.buffer
+          }
+        ]
+      });
+
+      res.send("<h2>Verificación enviada correctamente. Revisa tu correo.</h2>");
+    } catch (err) {
+      console.error("Error enviando correo:", err);
+      res.send("Error enviando el correo: " + err.message);
+    }
+  });
 });
 
 // ---------- START ----------
