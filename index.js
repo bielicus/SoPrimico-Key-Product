@@ -1,21 +1,14 @@
 const express = require("express");
 const crypto = require("crypto");
 const multer = require("multer");
-const nodemailer = require("nodemailer");
+const axios = require("axios");
+const FormData = require("form-data");
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
-// ---------- CONFIG EMAIL (GMAIL) ----------
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "bielicusyt@gmail.com",     // Tu Gmail
-    pass: "xkmpgiceiwstkelz"          // Contraseña de aplicación de Gmail
-  },
-  secure: true,
-  port: 465
-});
+// ---------- CONFIG WEBHOOK DISCORD ----------
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1451359934624174090/_AUS0GxiC47u7PnYgTwPFdlpTeyJk6COls_Lj_9Sq5UTDEQZ12_D2Arh1PnZ9mVYbBHI";
 
 // ---------- SUBIDA DE IMÁGENES ----------
 const upload = multer({
@@ -74,9 +67,8 @@ button { background:#00ff99; font-weight:bold; cursor:pointer; }
 `);
 });
 
-// ---------- RECIBIR FORM ----------
+// ---------- RECIBIR FORM Y ENVIAR A DISCORD ----------
 app.post("/enviar-verificacion", (req, res) => {
-  // Usamos multer manualmente para capturar errores
   upload.single("captura")(req, res, async (err) => {
     if (err) {
       console.error("Error subiendo archivo:", err);
@@ -85,35 +77,38 @@ app.post("/enviar-verificacion", (req, res) => {
 
     const { nombrePaypal, email, codigo } = req.body;
 
-    // Verificamos que haya imagen
     if (!req.file) {
       return res.send("La captura de PayPal es obligatoria.");
     }
 
     try {
-      // Enviar correo con la imagen adjunta
-      await transporter.sendMail({
-        from: `"Verificación Soprimico" <bielicusyt@gmail.com>`,
-        to: "bielicusyt@gmail.com",
-        subject: "Nueva verificación de compra",
-        html: `
-          <h2>Nueva compra</h2>
-          <p><strong>Código:</strong> ${codigo}</p>
-          <p><strong>Nombre PayPal:</strong> ${nombrePaypal}</p>
-          <p><strong>Email:</strong> ${email}</p>
-        `,
-        attachments: [
+      // Preparamos el formulario para Discord
+      const form = new FormData();
+      form.append("file", req.file.buffer, req.file.originalname);
+      form.append("payload_json", JSON.stringify({
+        username: "Verificación Soprimico",
+        embeds: [
           {
-            filename: req.file.originalname,
-            content: req.file.buffer
+            title: "Nueva compra",
+            color: 65280, // verde
+            fields: [
+              { name: "Código", value: codigo },
+              { name: "Nombre PayPal", value: nombrePaypal },
+              { name: "Email", value: email }
+            ]
           }
         ]
+      }));
+
+      // Enviamos a Discord
+      await axios.post(DISCORD_WEBHOOK_URL, form, {
+        headers: form.getHeaders()
       });
 
-      res.send("<h2>Verificación enviada correctamente. Revisa tu correo.</h2>");
-    } catch (err) {
-      console.error("Error enviando correo:", err);
-      res.send("Error enviando el correo: " + err.message);
+      res.send("<h2>Verificación enviada correctamente al servidor de Discord.</h2>");
+    } catch (error) {
+      console.error("Error enviando a Discord:", error);
+      res.send("Error enviando la verificación a Discord.");
     }
   });
 });
