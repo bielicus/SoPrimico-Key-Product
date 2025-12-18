@@ -8,7 +8,7 @@ function generarCodigo() {
 }
 
 app.get("/", (req, res) => {
-  res.send("Servidor activo")
+  res.send("Servidor activo/ si ves este enalace, pon /success al final")
 })
 
 app.get("/success", (req, res) => {
@@ -49,7 +49,7 @@ app.get("/success", (req, res) => {
         <h1>Pago completado</h1>
         <p>Tu código es:</p>
         <div class="code">${codigo}</div>
-        <p>Úsalo en Discord para recibir tu producto</p>
+        <p>Úsalo en Discord para recibir tu producto</p><p>Url de discord: https://discord.gg/kNh2PmRFEB</p>
       </div>
     </body>
     </html>
